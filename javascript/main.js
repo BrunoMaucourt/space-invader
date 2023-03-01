@@ -8,16 +8,11 @@ const hauteurEcran = 700;
 // Charger le canvas
 const canvas = document.getElementById("myCanvas");
 const ctx = canvas.getContext("2d");
-// Rendre accésible la constante ctx à d'autres modules
-export { ctx };
 
-let player = new Spaceship(
-    { x: 0, y: 0 },
-    100,
-    100);
+let player = new Spaceship({ x: 0, y: 0 }, 100, 100);
 
 /*
-* Gérer les touches
+* Gérer les touches du clavier
 */
 
 let rightPressed = false;
@@ -30,11 +25,9 @@ document.addEventListener("keyup", keyUpHandler, false);
 function keyDownHandler(e) {
     if(e.key == "Right" || e.key == "ArrowRight") {
         rightPressed = true;
-        console.log("droite");
     }
     else if(e.key == "Left" || e.key == "ArrowLeft") {
         leftPressed = true;
-        console.log("gauche");
     }
 }
 
@@ -47,16 +40,6 @@ function keyUpHandler(e) {
     }
 }
 
-/*
-* test de fonction pour se déplacer
-*/
-
-document.addEventListener('click', function () {
-
-    player.setPosition({ x: 100, y: 100 });
-})
-
-
 
 
 /*
@@ -65,6 +48,10 @@ document.addEventListener('click', function () {
 function update() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     player.displaySpaceship();
+    player.move();
+
 }
 
 setInterval(update, 10);
+// Rendre accésible la constante ctx à d'autres modules
+export { ctx, rightPressed, leftPressed };

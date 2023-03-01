@@ -1,4 +1,4 @@
-import { ctx} from './main.js';
+import { ctx, rightPressed, leftPressed} from './main.js';
 
 class Spaceship {
 
@@ -26,7 +26,7 @@ class Spaceship {
     }
 
     setPosition(newPosition){
-        this.position = newPosition;
+        this.position = newPosition ;
     }
 
 
@@ -37,6 +37,16 @@ class Spaceship {
     // point de vie
 
     // Déplacer
+    /*
+    * test de fonction pour se déplacer
+    */
+    move(){
+        if(rightPressed){
+            this.position = { x: this.position.x + 5, y: this.position.y };
+        }else if(leftPressed){
+            this.position = { x: this.position.x - 5, y: this.position.y };
+        }
+    }
 
 
     // Tirer
