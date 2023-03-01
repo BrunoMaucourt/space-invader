@@ -1,4 +1,4 @@
-import { ctx, rightPressed, leftPressed} from './main.js';
+import { ctx, rightPressed, leftPressed, spacePressed} from './main.js';
 
 class Spaceship {
 
@@ -20,6 +20,22 @@ class Spaceship {
         ctx.drawImage(spaceshipPicture, this.position.x, this.position.y, this.spaceshipHeight, this.spaceshipWidth);
     }
 
+    // Déplacer
+    move(){
+        if(rightPressed && this.position.x < 800){
+            this.position = { x: this.position.x + 5, y: this.position.y };
+        }else if(leftPressed && this.position.x > 0){
+            this.position = { x: this.position.x - 5, y: this.position.y };
+        }
+    }
+
+    // Tirer
+    shoot(){
+        if(spacePressed){
+            console.log("shoot");
+        }
+    }
+
     // Getter et setter
     getPosition(){
         return this.position;
@@ -36,17 +52,7 @@ class Spaceship {
 
     // point de vie
 
-    // Déplacer
-    /*
-    * test de fonction pour se déplacer
-    */
-    move(){
-        if(rightPressed){
-            this.position = { x: this.position.x + 5, y: this.position.y };
-        }else if(leftPressed){
-            this.position = { x: this.position.x - 5, y: this.position.y };
-        }
-    }
+
 
 
     // Tirer

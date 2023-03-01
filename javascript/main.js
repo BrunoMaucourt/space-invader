@@ -9,7 +9,7 @@ const hauteurEcran = 700;
 const canvas = document.getElementById("myCanvas");
 const ctx = canvas.getContext("2d");
 
-let player = new Spaceship({ x: 0, y: 0 }, 100, 100);
+let player = new Spaceship({ x: largeurEcran / 2 - 50, y: hauteurEcran - 100 }, 100, 100);
 
 /*
 * Gérer les touches du clavier
@@ -17,26 +17,33 @@ let player = new Spaceship({ x: 0, y: 0 }, 100, 100);
 
 let rightPressed = false;
 let leftPressed = false;
+let spacePressed = false;
 
 // (nom de l'eventlistener, nom de la fonction appelée, )
 document.addEventListener("keydown", keyDownHandler, false);
 document.addEventListener("keyup", keyUpHandler, false);
 
 function keyDownHandler(e) {
-    if(e.key == "Right" || e.key == "ArrowRight") {
+    if (e.key == "Right" || e.key == "ArrowRight") {
         rightPressed = true;
     }
-    else if(e.key == "Left" || e.key == "ArrowLeft") {
+    else if (e.key == "Left" || e.key == "ArrowLeft") {
         leftPressed = true;
+    }
+    else if (e.key == " ") {
+        spacePressed = true;
     }
 }
 
 function keyUpHandler(e) {
-    if(e.key == "Right" || e.key == "ArrowRight") {
+    if (e.key == "Right" || e.key == "ArrowRight") {
         rightPressed = false;
     }
-    else if(e.key == "Left" || e.key == "ArrowLeft") {
+    else if (e.key == "Left" || e.key == "ArrowLeft") {
         leftPressed = false;
+    }
+    else if (e.key == " ") {
+        spacePressed = false;
     }
 }
 
@@ -49,9 +56,10 @@ function update() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     player.displaySpaceship();
     player.move();
+    player.shoot();
 
 }
 
 setInterval(update, 10);
 // Rendre accésible la constante ctx à d'autres modules
-export { ctx, rightPressed, leftPressed };
+export { ctx, rightPressed, leftPressed, spacePressed };
