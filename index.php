@@ -10,6 +10,6 @@
 
 <body>
     <canvas id="myCanvas" width="900" height="700"></canvas>
-    <script type="module" src="./javascript/main.js"></script>
+    <script src="./javascript/main.js"></script>
 </body>
 </html>
