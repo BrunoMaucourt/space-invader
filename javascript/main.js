@@ -104,22 +104,14 @@ class Spaceship {
         if (spacePressed && this.allowedToShoot) {
             let bullet = new Bullet(this.position, "player", bulletList.length);
             bulletList.push(bullet);
-    
             this.allowedToShoot = false;
             setTimeout(() => {
                 this.allowedToShoot = true;
-                console.log("allowed to shoot");
-              }, timeBetweenTwoShoot)
-              
+            }, timeBetweenTwoShoot)
         }
-
-        //
-        // Warning
-        // this.position = { x: this.position.x, y: this.position.y };
-        //
     }
 
-    allowToShoot(){
+    allowToShoot() {
         console.log("allowed to shoot");
         this.allowedToShoot = true;
     }
@@ -164,7 +156,7 @@ class Bullet {
     displayBullet() {
         if (this.character == "player") {
             ctx.beginPath();
-            ctx.arc(this.bulletPosition.x + spaceshipPlayerWidth/2, this.bulletPosition.y, 20, 0, Math.PI * 2);
+            ctx.arc(this.bulletPosition.x + spaceshipPlayerWidth / 2, this.bulletPosition.y, 20, 0, Math.PI * 2);
             ctx.fillStyle = "#0095DD";
             ctx.fill();
             ctx.closePath();
@@ -173,14 +165,41 @@ class Bullet {
     }
 
     moveBullet() {
-        this.bulletPosition = { x: this.bulletPosition.x, y: this.bulletPosition.y - 5};
+        this.bulletPosition = { x: this.bulletPosition.x, y: this.bulletPosition.y - 5 };
+    }
+
+    destroyBullet() {
         if (this.bulletPosition.y < 0) {
             bulletList.shift();
         }
     }
+}
 
-    destroyBullet() {
+/** -----------------------------------
+ * 
+ *  Classe background
+ *  
+ ----------------------------------- */
 
+class Background {
+    constructor(number, position) {
+        this.number= number;
+        this.backgroundPicture = new Image();
+        this.backgroundPicture.src = './picture/background.png';
+        this.position = position;
+    }
+
+    display() {
+        ctx.drawImage(this.backgroundPicture, this.position.x, this.position.y, windowWidth, windowHeigth);
+    }
+
+    move(){
+        this.position = { x: this.position.x, y: this.position.y + 5 };
+        if(this.number == 1 && this.position.y > windowHeigth){
+            this.position = { x: 0, y: 0 }; 
+        }else if(this.number == 2 && this.position.y > 0){
+            this.position = { x: 0, y: - windowHeigth }; 
+        }
     }
 }
 
@@ -191,7 +210,8 @@ class Bullet {
  ----------------------------------- */
 
 let player = new Spaceship({ x: windowMidWidth - spaceshipPlayerHeight / 2, y: windowHeigth - spaceshipPlayerWidth }, spaceshipPlayerHeight, spaceshipPlayerWidth);
-
+let back = new Background(1, { x: 0, y: 0 });
+let back2 = new Background(2, { x: 0, y: - windowHeigth });
 
 /**
  * Fonction pour mise à jour de l'écran et gestions des actions
@@ -199,6 +219,10 @@ let player = new Spaceship({ x: windowMidWidth - spaceshipPlayerHeight / 2, y: w
  */
 function gameLoop() {
     ctx.clearRect(0, 0, windowWidth, windowHeigth);
+    back.display();
+    back2.display();
+    back.move();
+    back2.move();
     player.displaySpaceship();
     player.move();
     player.shoot();
