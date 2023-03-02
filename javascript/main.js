@@ -70,50 +70,33 @@ function keyUpHandler(e) {
 
 class Spaceship {
 
-    constructor(position, spaceshipHeight, spaceshipWidth) {
-        // Préciser si c'est le vaisseau du joueur ou de l'adversaire
-        // En fonction du cas afficher une image ou autre
-
-        // On définit la taille du vaisseau
+    constructor(position, spaceshipHeight, spaceshipWidth, healthPoint, picture) {
         this.spaceshipHeight = spaceshipHeight;
         this.spaceshipWidth = spaceshipWidth;
         this.position = position;
+        this.healthPoint = healthPoint;
+        this.picture = picture;
         this.allowedToShoot = true
     }
 
     // Afficher l'image du vaisseau
     displaySpaceship() {
         const spaceshipPicture = new Image();
-        spaceshipPicture.src = './picture/player.png';
+        spaceshipPicture.src = this.picture;
         ctx.drawImage(spaceshipPicture, this.position.x, this.position.y, this.spaceshipHeight, this.spaceshipWidth);
-        //console.log("spaceship X = " + this.position.x);        
-        //console.log("spaceship Y = " + this.position.y);
+
+        // Si le vaisseau n'a plus de points de vie afficher une explosion à la place
+        // Changer la taille de l'image d'explosion
     }
 
     // Déplacer le vaisseau
     move() {
-        if (rightPressed && this.position.x < 800) {
-            this.position = { x: this.position.x + 5, y: this.position.y };
-        } else if (leftPressed && this.position.x > 0) {
-            this.position = { x: this.position.x - 5, y: this.position.y };
-        }
+
     }
 
     // Tirer
     shoot() {
-        if (spacePressed && this.allowedToShoot) {
-            let bullet = new Bullet(this.position, "player", bulletList.length);
-            bulletList.push(bullet);
-            this.allowedToShoot = false;
-            setTimeout(() => {
-                this.allowedToShoot = true;
-            }, timeBetweenTwoShoot)
-        }
-    }
 
-    allowToShoot() {
-        console.log("allowed to shoot");
-        this.allowedToShoot = true;
     }
 
     /**
@@ -129,15 +112,72 @@ class Spaceship {
         this.position = newPosition;
     }
 
-    // charger l'image du vaisseau
-    // Si le vaisseau n'a plus de points de vie afficher une explosion à la place
-    // Changer la taille de l'image d'explosion
+    getHealthPoint() {
+        return this.healthPoint;
+    }
 
-    // point de vie
+    setHealthPoint(newHealthPoint) {
+        this.healthPoint = this.healthPoint + newHealthPoint;
+    }
 
     // Détecter si on se fait tirer dessus
 
     // Changer arme
+}
+
+/** -----------------------------------
+ * 
+ *  Classe PlayerSpaceship
+ *  
+ ----------------------------------- */
+
+class PlayerSpaceship extends Spaceship {
+    constructor(position, spaceshipHeight, spaceshipWidth, healthPoint, picture) {
+        super(position, spaceshipHeight, spaceshipWidth, healthPoint, picture);
+    }
+
+    move() {
+        if (rightPressed && this.position.x < 800) {
+            this.position = { x: this.position.x + 5, y: this.position.y };
+        } else if (leftPressed && this.position.x > 0) {
+            this.position = { x: this.position.x - 5, y: this.position.y };
+        }
+    }
+
+    shoot() {
+        if (spacePressed && this.allowedToShoot) {
+            let bullet = new Bullet(this.position, "player", bulletList.length);
+            bulletList.push(bullet);
+            this.allowedToShoot = false;
+            setTimeout(() => {
+                this.allowedToShoot = true;
+            }, timeBetweenTwoShoot)
+        }
+    }
+}
+
+/** -----------------------------------
+ * 
+ *  Classe OpponnentSpaceship
+ *  
+ ----------------------------------- */
+
+ class OpponnentSpaceship extends Spaceship {
+    constructor(position, spaceshipHeight, spaceshipWidth, healthPoint, picture) {
+        super(position, spaceshipHeight, spaceshipWidth, healthPoint, picture);
+    }
+
+    move() {
+
+    }
+
+    shoot() {
+
+    }
+
+    destroy(){
+         
+    }
 }
 
 /** -----------------------------------
@@ -156,7 +196,7 @@ class Bullet {
     displayBullet() {
         if (this.character == "player") {
             ctx.beginPath();
-            ctx.arc(this.bulletPosition.x + spaceshipPlayerWidth / 2, this.bulletPosition.y, 20, 0, Math.PI * 2);
+            ctx.arc(this.bulletPosition.x + spaceshipPlayerWidth / 2, this.bulletPosition.y, 10, 0, Math.PI * 2);
             ctx.fillStyle = "#0095DD";
             ctx.fill();
             ctx.closePath();
@@ -173,6 +213,23 @@ class Bullet {
             bulletList.shift();
         }
     }
+
+    collisionWithOpponnent(){
+        for(let i = 0; i < opponnentList.length; i++){
+            opponnentList[i].getPosition();
+            if(this.bulletPosition.x + spaceshipPlayerWidth / 2 >= opponnentList[i].getPosition().x &&
+            this.bulletPosition.x + 10 + spaceshipPlayerWidth / 2 >= opponnentList[i].getPosition().x &&
+            this.bulletPosition.x <= opponnentList[i].getPosition().x + spaceshipPlayerWidth &&
+            this.bulletPosition.x + 10 <= opponnentList[i].getPosition().x + spaceshipPlayerWidth){
+                if(this.bulletPosition.y >= opponnentList[i].getPosition().y &&
+                this.bulletPosition.y + 10 >= opponnentList[i].getPosition().y &&
+                 this.bulletPosition.y <= opponnentList[i].getPosition().y + spaceshipPlayerHeight &&
+                 this.bulletPosition.y + 10 <= opponnentList[i].getPosition().y + spaceshipPlayerHeight){
+                    opponnentList[i].setHealthPoint(-1);
+                }
+            }
+        }
+    }
 }
 
 /** -----------------------------------
@@ -183,7 +240,7 @@ class Bullet {
 
 class Background {
     constructor(number, position) {
-        this.number= number;
+        this.number = number;
         this.backgroundPicture = new Image();
         this.backgroundPicture.src = './picture/background.png';
         this.position = position;
@@ -193,25 +250,51 @@ class Background {
         ctx.drawImage(this.backgroundPicture, this.position.x, this.position.y, windowWidth, windowHeigth);
     }
 
-    move(){
+    move() {
         this.position = { x: this.position.x, y: this.position.y + 5 };
-        if(this.number == 1 && this.position.y > windowHeigth){
-            this.position = { x: 0, y: 0 }; 
-        }else if(this.number == 2 && this.position.y > 0){
-            this.position = { x: 0, y: - windowHeigth }; 
+        if (this.number == 1 && this.position.y > windowHeigth) {
+            this.position = { x: 0, y: 0 };
+        } else if (this.number == 2 && this.position.y > 0) {
+            this.position = { x: 0, y: - windowHeigth };
         }
     }
 }
 
 /** -----------------------------------
  * 
- *  Créer les vaisseaux
+ *  Classe HUD
  *  
  ----------------------------------- */
 
-let player = new Spaceship({ x: windowMidWidth - spaceshipPlayerHeight / 2, y: windowHeigth - spaceshipPlayerWidth }, spaceshipPlayerHeight, spaceshipPlayerWidth);
+class HUD {
+    constructor(color) {
+        this.color = color;
+    }
+
+    display() {
+        ctx.fillStyle = this.color;
+        ctx.font = '30px Sans-Serif';
+        ctx.textBaseline = 'top';
+        ctx.fillText("Life : " + player.getHealthPoint(), 20, 20);
+        ctx.fillText("Score : " + player.getHealthPoint(), 20, 80);
+    }
+}
+
+/** -----------------------------------
+ * 
+ *  Initialiser la partie
+ *  
+ ----------------------------------- */
+
+let player = new PlayerSpaceship({ x: windowMidWidth - spaceshipPlayerHeight / 2, y: windowHeigth - spaceshipPlayerWidth }, spaceshipPlayerHeight, spaceshipPlayerWidth, 10, "./picture/player.png");
+let opponnentList =[
+    new OpponnentSpaceship({ x: 100, y: 0 }, spaceshipPlayerHeight, spaceshipPlayerWidth, 3, "./picture/opponnent.png"),
+    new OpponnentSpaceship({ x: 500 - spaceshipPlayerHeight / 2, y: 0 }, spaceshipPlayerHeight, spaceshipPlayerWidth, 3, "./picture/opponnent.png"),
+    new OpponnentSpaceship({ x: 800 - spaceshipPlayerHeight / 2, y: 0 }, spaceshipPlayerHeight, spaceshipPlayerWidth, 3, "./picture/opponnent.png"),
+];
 let back = new Background(1, { x: 0, y: 0 });
 let back2 = new Background(2, { x: 0, y: - windowHeigth });
+let hud = new HUD('#00F');
 
 /**
  * Fonction pour mise à jour de l'écran et gestions des actions
@@ -227,12 +310,21 @@ function gameLoop() {
     player.move();
     player.shoot();
 
+    // Afficher les adversaires
+    for(let i = 0; i < opponnentList.length; i++){
+        opponnentList[i].displaySpaceship();
+        console.log("adversaire" + i + " = " +opponnentList[i].getHealthPoint());
+    }
+
     // Afficher les munitions
     for (let i = 0; i < bulletList.length; i++) {
         bulletList[i].displayBullet();
         bulletList[i].moveBullet();
         bulletList[i].destroyBullet();
+        bulletList[i].collisionWithOpponnent();
     }
+
+    hud.display();
 }
 
 // Mettre à jour l'affichage
