@@ -20,6 +20,8 @@ const spaceshipPlayerVelocity = 5;
 const spaceshipPlayerHealthPoint = 3;
 const spaceshipOpponnentVelocity = 1;
 const spaceshipOpponnentHealthPoint = 1;
+const bulletWidth = 25;
+const bulletHeight = 25;
 const timeBeforeUpdate = 10;
 const timeBetweenTwoShoot = 200;
 
@@ -112,11 +114,11 @@ class Spaceship {
         this.position = newPosition;
     }
 
-    getSpaceshipHeight() {
+    getHeight() {
         return this.spaceshipHeight;
     }
 
-    getSpaceshipWidth() {
+    getWidth() {
         return this.spaceshipWidth;
     }
 
@@ -152,12 +154,18 @@ class PlayerSpaceship extends Spaceship {
 
     shoot() {
         if (spacePressed && this.allowedToShoot) {
-            let bullet = new Bullet(this.position, "player");
+            let bullet = new Bullet({ x: this.position.x + spaceshipPlayerWidth / 2 - bulletWidth / 2, y: this.position.y }, "player");
             bulletList.push(bullet);
             this.allowedToShoot = false;
             setTimeout(() => {
                 this.allowedToShoot = true;
             }, timeBetweenTwoShoot)
+        }
+    }
+
+    checkCollision() {
+        if (GameManagement.collision(this, opponnentList)) {
+            this.healthPoint -= 1;
         }
     }
 }
@@ -208,7 +216,7 @@ class BossSpaceship extends Spaceship {
 
     shoot() {
         if (this.allowedToShoot) {
-            let bullet = new Bullet(this.position, "opponnent");
+            let bullet = new Bullet({ x: this.position.x + spaceshipPlayerWidth / 2 - bulletWidth / 2, y: this.position.y }, "opponnent");
             bulletList.push(bullet);
             this.allowedToShoot = false;
             setTimeout(() => {
@@ -232,14 +240,12 @@ class Bullet {
 
     displayBullet() {
         if (this.character == "player") {
-            ctx.beginPath();
-            ctx.arc(this.bulletPosition.x + spaceshipPlayerWidth / 2, this.bulletPosition.y, 10, 0, Math.PI * 2);
-            ctx.fillStyle = "#0095DD";
-            ctx.fill();
-            ctx.closePath();
+            let playerBullet = new Image();
+            playerBullet.src = "./picture/playerBullet.png";
+            ctx.drawImage(playerBullet, this.bulletPosition.x, this.bulletPosition.y, bulletWidth, bulletHeight);
         } else if (this.character == "opponnent") {
             ctx.beginPath();
-            ctx.arc(this.bulletPosition.x + spaceshipPlayerWidth / 2, this.bulletPosition.y, 10, 0, Math.PI * 2);
+            ctx.arc(this.bulletPosition.x, this.bulletPosition.y, 10, 0, Math.PI * 2);
             ctx.fillStyle = "#ff0000";
             ctx.fill();
             ctx.closePath();
@@ -255,24 +261,27 @@ class Bullet {
     }
 
     destroyBullet() {
-        if (this.bulletPosition.y > windowHeigth && this.bulletPosition.y < 0) {
+        if (this.bulletPosition.y > windowHeigth || this.bulletPosition.y < 0) {
             return true;
         }
     }
 
+    getPosition() {
+        return this.bulletPosition;
+    }
+
+    getHeight() {
+        return bulletHeight;
+    }
+
+    getWidth() {
+        return bulletWidth;
+    }
+
     collisionWithOpponnent() {
-        if (this.character == "player") {
-            for (let i = 0; i < opponnentList.length; i++) {
-                opponnentList[i].getPosition();
-                if (this.bulletPosition.x + spaceshipPlayerWidth / 2 >= opponnentList[i].getPosition().x &&
-                    this.bulletPosition.x <= opponnentList[i].getPosition().x + spaceshipPlayerWidth) {
-                    if (this.bulletPosition.y >= opponnentList[i].getPosition().y && this.bulletPosition.y <= opponnentList[i].getPosition().y + spaceshipPlayerHeight) {
-                        opponnentList[i].setHealthPoint(-1);
-                        score += 10;
-                        return true;
-                    }
-                }
-            }
+        if (GameManagement.collision(this, opponnentList) && this.character == "player") {
+            score += 10;
+            return true;
         }
     }
 
@@ -349,7 +358,6 @@ class HUD {
 
 class GameManagement {
     static game_initialization() {
-        console.log("reset");
         player = new PlayerSpaceship({ x: windowMidWidth - spaceshipPlayerHeight / 2, y: windowHeigth - spaceshipPlayerWidth }, spaceshipPlayerHeight, spaceshipPlayerWidth, spaceshipPlayerHealthPoint, "./picture/player.png");
         back = new Background(1, { x: 0, y: 0 });
         back2 = new Background(2, { x: 0, y: - windowHeigth });
@@ -379,27 +387,25 @@ class GameManagement {
     }
 
     /**
-     * Elements pour gérer les collissions
+     * Elements pour gérer les collisions
      * @param {*} a (vaisseaux joueur ou de l'adversaire)
      * @param {*} array  tableau avec tous les éléments B
      */
     static collision(a, array) {
         let positionA = a.getPosition();
-        let heigthA = a.getSpaceshipHeight();
-        let widthA = a.getSpaceshipWidth();
+        let heigthA = a.getHeight();
+        let widthA = a.getWidth();
         for (let i = 0; i < array.length; i++) {
             let positionB = array[i].getPosition();
-            let heigthB = array[i].getSpaceshipHeight();
-            let widthB = array[i].getSpaceshipWidth();
-            // Regarder s'il y a une collision sur l'axe x
-            if (positionA.x <= positionB.x && positionB.x <= positionA.x + widthA || positionA.x <= positionB.x && positionB.x + widthB <= positionA.x + widthA) {
-                console.log("C'est bon pour l'axe X");
-                // regarder s'il y a une collision sur l'axe des y
-                if (positionA.y <= positionB.y && positionA.y <= positionA.y + heigthA || positionA.y <= positionB.y + heigthB && positionA.y <= positionA.y + heigthA) {
-                    console.log("c'est bon pour l'axe Y");
-                    a.setHealthPoint(-1);
-                    array.splice(i, 1);
-                }
+            let heigthB = array[i].getHeight();
+            let widthB = array[i].getWidth();
+            if (positionA.x + widthA >= positionB.x &&
+                positionB.x + widthB >= positionA.x &&
+                positionA.y + heigthA >= positionB.y &&
+                positionB.y + heigthB >= positionA.y) {
+                console.log("nouvelle méthode");
+                array.splice(i, 1);
+                return true
             }
         }
     }
@@ -434,15 +440,7 @@ function gameLoop() {
     player.displaySpaceship();
     player.move();
     player.shoot();
-
-
-
-    //test de collission 
-    GameManagement.collision(player, opponnentList);
-
-
-
-
+    player.checkCollision();
 
     if (player.getHealthPoint() < 1) {
         GameManagement.game_initialization();
