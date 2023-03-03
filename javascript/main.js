@@ -16,6 +16,10 @@ const windowMidWidth = windowWidth / 2;
 const windowHeigth = 700;
 const spaceshipPlayerHeight = 100;
 const spaceshipPlayerWidth = 100;
+const spaceshipPlayerVelocity = 5;
+const spaceshipPlayerHealthPoint = 3;
+const spaceshipOpponnentVelocity = 1;
+const spaceshipOpponnentHealthPoint = 1;
 const timeBeforeUpdate = 10;
 const timeBetweenTwoShoot = 200;
 
@@ -89,14 +93,10 @@ class Spaceship {
         // Changer la taille de l'image d'explosion
     }
 
-    // Déplacer le vaisseau
-    move() {
-
-    }
-
-    // Tirer
-    shoot() {
-
+    checkIfAlive() {
+        if (this.position.y > windowHeigth || this.healthPoint < 1) {
+            return true;
+        }
     }
 
     /**
@@ -120,8 +120,6 @@ class Spaceship {
         this.healthPoint = this.healthPoint + newHealthPoint;
     }
 
-    // Détecter si on se fait tirer dessus
-
     // Changer arme
 }
 
@@ -137,16 +135,16 @@ class PlayerSpaceship extends Spaceship {
     }
 
     move() {
-        if (rightPressed && this.position.x < 800) {
-            this.position = { x: this.position.x + 5, y: this.position.y };
+        if (rightPressed && this.position.x < windowWidth - spaceshipPlayerWidth) {
+            this.position = { x: this.position.x + spaceshipPlayerVelocity, y: this.position.y };
         } else if (leftPressed && this.position.x > 0) {
-            this.position = { x: this.position.x - 5, y: this.position.y };
+            this.position = { x: this.position.x - spaceshipPlayerVelocity, y: this.position.y };
         }
     }
 
     shoot() {
         if (spacePressed && this.allowedToShoot) {
-            let bullet = new Bullet(this.position, "player", bulletList.length);
+            let bullet = new Bullet(this.position, "player");
             bulletList.push(bullet);
             this.allowedToShoot = false;
             setTimeout(() => {
@@ -162,21 +160,53 @@ class PlayerSpaceship extends Spaceship {
  *  
  ----------------------------------- */
 
- class OpponnentSpaceship extends Spaceship {
+class OpponnentSpaceship extends Spaceship {
     constructor(position, spaceshipHeight, spaceshipWidth, healthPoint, picture) {
         super(position, spaceshipHeight, spaceshipWidth, healthPoint, picture);
     }
 
     move() {
+        this.position = { x: this.position.x, y: this.position.y + spaceshipOpponnentVelocity };
+    }
+}
 
+/** -----------------------------------
+ * 
+ *  Classe BossSpaceship
+ *  
+ ----------------------------------- */
+
+ class BossSpaceship extends Spaceship {
+    constructor(position, spaceshipHeight, spaceshipWidth, healthPoint, picture, direction) {
+        super(position, spaceshipHeight, spaceshipWidth, healthPoint, picture);
+        this.direction = direction;
+    }
+
+    move() {
+        if(this.direction == "right" && this.position.x ){
+            this.position = { x: this.position.x + spaceshipOpponnentVelocity, y: this.position.y};
+        }else{
+            this.position = { x: this.position.x - spaceshipOpponnentVelocity, y: this.position.y};
+        }
+    }
+
+    switchDirection(){
+        if(this.position.x > windowWidth - this.spaceshipWidth){
+            this.direction = "left";
+        }else if(this.position.x < 0){
+            this.direction = "right";
+        }
     }
 
     shoot() {
-
-    }
-
-    destroy(){
-         
+        if (this.allowedToShoot) {
+            let bullet = new Bullet(this.position, "opponnent");
+            bulletList.push(bullet);
+            this.allowedToShoot = false;
+            setTimeout(() => {
+                this.allowedToShoot = true;
+            }, timeBetweenTwoShoot * 5)
+        }
     }
 }
 
@@ -187,10 +217,9 @@ class PlayerSpaceship extends Spaceship {
  ----------------------------------- */
 
 class Bullet {
-    constructor(bulletPosition, character, index) {
+    constructor(bulletPosition, character) {
         this.bulletPosition = bulletPosition;
         this.character = character;
-        this.index = index;
     }
 
     displayBullet() {
@@ -201,31 +230,54 @@ class Bullet {
             ctx.fill();
             ctx.closePath();
         } else if (this.character == "opponnent") {
+            ctx.beginPath();
+            ctx.arc(this.bulletPosition.x + spaceshipPlayerWidth / 2, this.bulletPosition.y, 10, 0, Math.PI * 2);
+            ctx.fillStyle = "#ff0000";
+            ctx.fill();
+            ctx.closePath();
         }
     }
 
     moveBullet() {
-        this.bulletPosition = { x: this.bulletPosition.x, y: this.bulletPosition.y - 5 };
-    }
-
-    destroyBullet() {
-        if (this.bulletPosition.y < 0) {
-            bulletList.shift();
+        if (this.character == "player") {
+            this.bulletPosition = { x: this.bulletPosition.x, y: this.bulletPosition.y - 5 };
+        } else if (this.character == "opponnent") {
+            this.bulletPosition = { x: this.bulletPosition.x, y: this.bulletPosition.y + 5 };
         }
     }
 
-    collisionWithOpponnent(){
-        for(let i = 0; i < opponnentList.length; i++){
-            opponnentList[i].getPosition();
-            if(this.bulletPosition.x + spaceshipPlayerWidth / 2 >= opponnentList[i].getPosition().x &&
-            this.bulletPosition.x + 10 + spaceshipPlayerWidth / 2 >= opponnentList[i].getPosition().x &&
-            this.bulletPosition.x <= opponnentList[i].getPosition().x + spaceshipPlayerWidth &&
-            this.bulletPosition.x + 10 <= opponnentList[i].getPosition().x + spaceshipPlayerWidth){
-                if(this.bulletPosition.y >= opponnentList[i].getPosition().y &&
-                this.bulletPosition.y + 10 >= opponnentList[i].getPosition().y &&
-                 this.bulletPosition.y <= opponnentList[i].getPosition().y + spaceshipPlayerHeight &&
-                 this.bulletPosition.y + 10 <= opponnentList[i].getPosition().y + spaceshipPlayerHeight){
-                    opponnentList[i].setHealthPoint(-1);
+    destroyBullet() {
+        if (this.bulletPosition.y > windowHeigth && this.bulletPosition.y < 0) {
+            return true;
+        }
+    }
+
+    collisionWithOpponnent() {
+        if (this.character == "player") {
+            for (let i = 0; i < opponnentList.length; i++) {
+                opponnentList[i].getPosition();
+                if (this.bulletPosition.x + spaceshipPlayerWidth / 2 >= opponnentList[i].getPosition().x &&
+                    this.bulletPosition.x <= opponnentList[i].getPosition().x + spaceshipPlayerWidth) {
+                    if (this.bulletPosition.y >= opponnentList[i].getPosition().y && this.bulletPosition.y <= opponnentList[i].getPosition().y + spaceshipPlayerHeight) {
+                        opponnentList[i].setHealthPoint(-1);
+                        score += 10;
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+
+    collisionWithplayer() {
+        if (this.character == "opponnent") {
+            for (let i = 0; i < opponnentList.length; i++) {
+                player.getPosition();
+                if (this.bulletPosition.x + spaceshipPlayerWidth / 2 >= player.getPosition().x &&
+                    this.bulletPosition.x <= player.getPosition().x + spaceshipPlayerWidth) {
+                    if (this.bulletPosition.y >= player.getPosition().y && this.bulletPosition.y <= player.getPosition().y + spaceshipPlayerHeight) {
+                        player.setHealthPoint(-1);
+                        return true;
+                    }
                 }
             }
         }
@@ -276,7 +328,48 @@ class HUD {
         ctx.font = '30px Sans-Serif';
         ctx.textBaseline = 'top';
         ctx.fillText("Life : " + player.getHealthPoint(), 20, 20);
-        ctx.fillText("Score : " + player.getHealthPoint(), 20, 80);
+        ctx.fillText("Score : " + score, 20, 80);
+    }
+}
+
+/** -----------------------------------
+ * 
+ *  Classe GameManagement
+ *  
+ ----------------------------------- */
+
+class GameManagement {
+    static game_initialization() {
+        player = new PlayerSpaceship({ x: windowMidWidth - spaceshipPlayerHeight / 2, y: windowHeigth - spaceshipPlayerWidth }, spaceshipPlayerHeight, spaceshipPlayerWidth, spaceshipPlayerHealthPoint, "./picture/player.png");
+        opponnentList = [
+            new OpponnentSpaceship({ x: 100, y: 0 }, spaceshipPlayerHeight, spaceshipPlayerWidth, spaceshipOpponnentHealthPoint, "./picture/opponnent.png"),
+            new OpponnentSpaceship({ x: 500 - spaceshipPlayerHeight / 2, y: 0 }, spaceshipPlayerHeight, spaceshipPlayerWidth, spaceshipOpponnentHealthPoint, "./picture/opponnent.png"),
+            new OpponnentSpaceship({ x: 800 - spaceshipPlayerHeight / 2, y: 0 }, spaceshipPlayerHeight, spaceshipPlayerWidth, spaceshipOpponnentHealthPoint, "./picture/opponnent.png"),
+        ];
+        back = new Background(1, { x: 0, y: 0 });
+        back2 = new Background(2, { x: 0, y: - windowHeigth });
+        hud = new HUD('#00F');
+        score = 0;
+    }
+
+    static addOpponnent() {
+        if (newOpponnentAllowed == true) {
+
+            let newOP = new OpponnentSpaceship({ x: GameManagement.getRandomNumber(0, 800), y: 0 }, spaceshipPlayerHeight, spaceshipPlayerWidth, spaceshipOpponnentHealthPoint, "./picture/opponnent.png");
+            let newBoss = new BossSpaceship({ x: GameManagement.getRandomNumber(0, 800), y: 0 }, spaceshipPlayerHeight, spaceshipPlayerWidth, spaceshipOpponnentHealthPoint, "./picture/opponnent.png", "left");
+            opponnentList.push(newOP);
+            opponnentList.push(newBoss);
+            newOpponnentAllowed = false;
+            console.log(newOpponnentAllowed);
+            setTimeout(
+                newOpponnentAllowed = true,
+                9000
+            );
+        }
+    }
+
+    static getRandomNumber(min, max) {
+        return Math.random() * (max - min) + min;
     }
 }
 
@@ -286,44 +379,61 @@ class HUD {
  *  
  ----------------------------------- */
 
-let player = new PlayerSpaceship({ x: windowMidWidth - spaceshipPlayerHeight / 2, y: windowHeigth - spaceshipPlayerWidth }, spaceshipPlayerHeight, spaceshipPlayerWidth, 10, "./picture/player.png");
-let opponnentList =[
-    new OpponnentSpaceship({ x: 100, y: 0 }, spaceshipPlayerHeight, spaceshipPlayerWidth, 3, "./picture/opponnent.png"),
-    new OpponnentSpaceship({ x: 500 - spaceshipPlayerHeight / 2, y: 0 }, spaceshipPlayerHeight, spaceshipPlayerWidth, 3, "./picture/opponnent.png"),
-    new OpponnentSpaceship({ x: 800 - spaceshipPlayerHeight / 2, y: 0 }, spaceshipPlayerHeight, spaceshipPlayerWidth, 3, "./picture/opponnent.png"),
-];
+let player = new PlayerSpaceship({ x: windowMidWidth - spaceshipPlayerHeight / 2, y: windowHeigth - spaceshipPlayerWidth }, spaceshipPlayerHeight, spaceshipPlayerWidth, spaceshipPlayerHealthPoint, "./picture/player.png");
+let opponnentList = [];
 let back = new Background(1, { x: 0, y: 0 });
 let back2 = new Background(2, { x: 0, y: - windowHeigth });
 let hud = new HUD('#00F');
+let score = 0;
+let newOpponnentAllowed = true;
 
 /**
  * Fonction pour mise à jour de l'écran et gestions des actions
  * 
  */
 function gameLoop() {
+    // Effacer l'affichage précédant
     ctx.clearRect(0, 0, windowWidth, windowHeigth);
+    // Background
     back.display();
     back2.display();
     back.move();
     back2.move();
+    // PlayerSpaceship
     player.displaySpaceship();
     player.move();
     player.shoot();
-
-    // Afficher les adversaires
-    for(let i = 0; i < opponnentList.length; i++){
-        opponnentList[i].displaySpaceship();
-        console.log("adversaire" + i + " = " +opponnentList[i].getHealthPoint());
+    if (player.getHealthPoint() < 1) {
+        GameManagement.game_initialization();
     }
 
-    // Afficher les munitions
+    // Afficher les adversaires
+    for (let i = 0; i < opponnentList.length; i++) {
+        opponnentList[i].displaySpaceship();
+        opponnentList[i].move();
+        if(opponnentList[i] instanceof BossSpaceship){
+            opponnentList[i].switchDirection();
+            opponnentList[i].shoot();
+        }
+        // Vérifier si les adversaires sont toujours vivants (ou hors de l'écran)
+        if (opponnentList[i].checkIfAlive()) {
+            opponnentList.splice(i, 1);
+        }
+    }
+
+    if (opponnentList.length == 0) {
+        GameManagement.addOpponnent();
+    }
+
+    // Afficher et gérer les munitions
     for (let i = 0; i < bulletList.length; i++) {
         bulletList[i].displayBullet();
         bulletList[i].moveBullet();
-        bulletList[i].destroyBullet();
-        bulletList[i].collisionWithOpponnent();
+        // Retirer 
+        if (bulletList[i].destroyBullet() || bulletList[i].collisionWithplayer() || bulletList[i].collisionWithOpponnent()) {
+            bulletList.splice(i, 1);
+        }
     }
-
     hud.display();
 }
 
