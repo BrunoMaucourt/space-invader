@@ -29,7 +29,7 @@ const ctx = canvas.getContext("2d");
 
 // Créer des tableaux pour les vaisseaux et les tirs
 let bulletList = [];
-let spaceshipList = [];
+let opponnentList = [];
 
 /** -----------------------------------
 * 
@@ -112,6 +112,14 @@ class Spaceship {
         this.position = newPosition;
     }
 
+    getSpaceshipHeight() {
+        return this.spaceshipHeight;
+    }
+
+    getSpaceshipWidth() {
+        return this.spaceshipWidth;
+    }
+
     getHealthPoint() {
         return this.healthPoint;
     }
@@ -176,24 +184,24 @@ class OpponnentSpaceship extends Spaceship {
  *  
  ----------------------------------- */
 
- class BossSpaceship extends Spaceship {
+class BossSpaceship extends Spaceship {
     constructor(position, spaceshipHeight, spaceshipWidth, healthPoint, picture, direction) {
         super(position, spaceshipHeight, spaceshipWidth, healthPoint, picture);
         this.direction = direction;
     }
 
     move() {
-        if(this.direction == "right" && this.position.x ){
-            this.position = { x: this.position.x + spaceshipOpponnentVelocity, y: this.position.y};
-        }else{
-            this.position = { x: this.position.x - spaceshipOpponnentVelocity, y: this.position.y};
+        if (this.direction == "right" && this.position.x) {
+            this.position = { x: this.position.x + spaceshipOpponnentVelocity, y: this.position.y };
+        } else {
+            this.position = { x: this.position.x - spaceshipOpponnentVelocity, y: this.position.y };
         }
     }
 
-    switchDirection(){
-        if(this.position.x > windowWidth - this.spaceshipWidth){
+    switchDirection() {
+        if (this.position.x > windowWidth - this.spaceshipWidth) {
             this.direction = "left";
-        }else if(this.position.x < 0){
+        } else if (this.position.x < 0) {
             this.direction = "right";
         }
     }
@@ -319,14 +327,15 @@ class Background {
  ----------------------------------- */
 
 class HUD {
-    constructor(color) {
-        this.color = color;
+    constructor(fontColor) {
+        this.fontColor = fontColor;
     }
 
     display() {
-        ctx.fillStyle = this.color;
+        ctx.fillStyle = this.fontColor;
         ctx.font = '30px Sans-Serif';
         ctx.textBaseline = 'top';
+        // Mettre sous forme de constante les positions
         ctx.fillText("Life : " + player.getHealthPoint(), 20, 20);
         ctx.fillText("Score : " + score, 20, 80);
     }
@@ -340,27 +349,24 @@ class HUD {
 
 class GameManagement {
     static game_initialization() {
+        console.log("reset");
         player = new PlayerSpaceship({ x: windowMidWidth - spaceshipPlayerHeight / 2, y: windowHeigth - spaceshipPlayerWidth }, spaceshipPlayerHeight, spaceshipPlayerWidth, spaceshipPlayerHealthPoint, "./picture/player.png");
-        opponnentList = [
-            new OpponnentSpaceship({ x: 100, y: 0 }, spaceshipPlayerHeight, spaceshipPlayerWidth, spaceshipOpponnentHealthPoint, "./picture/opponnent.png"),
-            new OpponnentSpaceship({ x: 500 - spaceshipPlayerHeight / 2, y: 0 }, spaceshipPlayerHeight, spaceshipPlayerWidth, spaceshipOpponnentHealthPoint, "./picture/opponnent.png"),
-            new OpponnentSpaceship({ x: 800 - spaceshipPlayerHeight / 2, y: 0 }, spaceshipPlayerHeight, spaceshipPlayerWidth, spaceshipOpponnentHealthPoint, "./picture/opponnent.png"),
-        ];
         back = new Background(1, { x: 0, y: 0 });
         back2 = new Background(2, { x: 0, y: - windowHeigth });
         hud = new HUD('#00F');
         score = 0;
+        bulletList = [];
+        opponnentList = [];
     }
 
     static addOpponnent() {
         if (newOpponnentAllowed == true) {
 
             let newOP = new OpponnentSpaceship({ x: GameManagement.getRandomNumber(0, 800), y: 0 }, spaceshipPlayerHeight, spaceshipPlayerWidth, spaceshipOpponnentHealthPoint, "./picture/opponnent.png");
-            let newBoss = new BossSpaceship({ x: GameManagement.getRandomNumber(0, 800), y: 0 }, spaceshipPlayerHeight, spaceshipPlayerWidth, spaceshipOpponnentHealthPoint, "./picture/opponnent.png", "left");
+            let newBoss = new BossSpaceship({ x: GameManagement.getRandomNumber(0, 800), y: 0 }, spaceshipPlayerHeight, spaceshipPlayerWidth, spaceshipOpponnentHealthPoint, "./picture/boss.png", "left");
             opponnentList.push(newOP);
             opponnentList.push(newBoss);
             newOpponnentAllowed = false;
-            console.log(newOpponnentAllowed);
             setTimeout(
                 newOpponnentAllowed = true,
                 9000
@@ -371,6 +377,32 @@ class GameManagement {
     static getRandomNumber(min, max) {
         return Math.random() * (max - min) + min;
     }
+
+    /**
+     * Elements pour gérer les collissions
+     * @param {*} a (vaisseaux joueur ou de l'adversaire)
+     * @param {*} array  tableau avec tous les éléments B
+     */
+    static collision(a, array) {
+        let positionA = a.getPosition();
+        let heigthA = a.getSpaceshipHeight();
+        let widthA = a.getSpaceshipWidth();
+        for (let i = 0; i < array.length; i++) {
+            let positionB = array[i].getPosition();
+            let heigthB = array[i].getSpaceshipHeight();
+            let widthB = array[i].getSpaceshipWidth();
+            // Regarder s'il y a une collision sur l'axe x
+            if (positionA.x <= positionB.x && positionB.x <= positionA.x + widthA || positionA.x <= positionB.x && positionB.x + widthB <= positionA.x + widthA) {
+                console.log("C'est bon pour l'axe X");
+                // regarder s'il y a une collision sur l'axe des y
+                if (positionA.y <= positionB.y && positionA.y <= positionA.y + heigthA || positionA.y <= positionB.y + heigthB && positionA.y <= positionA.y + heigthA) {
+                    console.log("c'est bon pour l'axe Y");
+                    a.setHealthPoint(-1);
+                    array.splice(i, 1);
+                }
+            }
+        }
+    }
 }
 
 /** -----------------------------------
@@ -380,7 +412,6 @@ class GameManagement {
  ----------------------------------- */
 
 let player = new PlayerSpaceship({ x: windowMidWidth - spaceshipPlayerHeight / 2, y: windowHeigth - spaceshipPlayerWidth }, spaceshipPlayerHeight, spaceshipPlayerWidth, spaceshipPlayerHealthPoint, "./picture/player.png");
-let opponnentList = [];
 let back = new Background(1, { x: 0, y: 0 });
 let back2 = new Background(2, { x: 0, y: - windowHeigth });
 let hud = new HUD('#00F');
@@ -403,6 +434,16 @@ function gameLoop() {
     player.displaySpaceship();
     player.move();
     player.shoot();
+
+
+
+    //test de collission 
+    GameManagement.collision(player, opponnentList);
+
+
+
+
+
     if (player.getHealthPoint() < 1) {
         GameManagement.game_initialization();
     }
@@ -411,9 +452,9 @@ function gameLoop() {
     for (let i = 0; i < opponnentList.length; i++) {
         opponnentList[i].displaySpaceship();
         opponnentList[i].move();
-        if(opponnentList[i] instanceof BossSpaceship){
+        if (opponnentList[i] instanceof BossSpaceship) {
             opponnentList[i].switchDirection();
-            opponnentList[i].shoot();
+            //opponnentList[i].shoot();
         }
         // Vérifier si les adversaires sont toujours vivants (ou hors de l'écran)
         if (opponnentList[i].checkIfAlive()) {
