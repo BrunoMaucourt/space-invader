@@ -28,22 +28,25 @@ const bulletDamagePlayer = -1;
 const bulletDamageBoss = -1;
 const scoreOpponnent = 10;
 const collisionNotDetected = -1;
+const bonusTypeShield = 1;
 const timeBeforeUpdate = 10;
-const timeBetweenTwoShoot = 200;
+const timeBetweenTwoShoot = 400;
 const explosionAnimationDuration = 40;
 const hudX = 20;
 const hudLifeY = 20;
 const hudScoreY = 80;
+const hudBonusY = 140;
 
 // Charger le canvas
 const canvas = document.getElementById("myCanvas");
 const ctx = canvas.getContext("2d");
 
-// Créer des tableaux pour les vaisseaux et les tirs
+// Créer des tableaux pour les vaisseaux, les tirs, les explosions, les bonus
 let bulletListPlayer = [];
 let bulletListOpponnent = [];
 let explosionList = [];
 let opponnentList = [];
+let bonusList = [];
 
 /** -----------------------------------
 * 
@@ -121,7 +124,11 @@ class Spaceship {
         let collision = GameManagement.collision(this, array);
         if (collision > collisionNotDetected) {
             if (array == bulletListOpponnent) {
-                player.setHealthPoint(bulletDamageBoss);
+                if(player.getBonus() == bonusTypeShield){
+                    player.setBonus(0);
+                }else{
+                    player.setHealthPoint(bulletDamageBoss);
+                }
                 bulletListOpponnent.splice(collision, 1);
             } else if (array == bulletListPlayer) {
                 score += scoreOpponnent;
@@ -170,8 +177,10 @@ class Spaceship {
  ----------------------------------- */
 
 class PlayerSpaceship extends Spaceship {
-    constructor(position, spaceshipHeight, spaceshipWidth, healthPoint, picture) {
+    constructor(position, spaceshipHeight, spaceshipWidth, healthPoint, shootType, bonus, picture) {
         super(position, spaceshipHeight, spaceshipWidth, healthPoint, picture);
+        this.shootType = shootType;
+        this.bonus = bonus;
     }
 
     move() {
@@ -196,10 +205,30 @@ class PlayerSpaceship extends Spaceship {
     checkCollisionSpaceship() {
         let collision = GameManagement.collision(this, opponnentList);
         if (collision > collisionNotDetected) {
-            this.healthPoint += collisionDamage;
+            if (this.bonus == bonusTypeShield) {
+                this.bonus = 0;
+            } else {
+                this.healthPoint += collisionDamage;
+            }
             opponnentList[collision].explosion();
             opponnentList.splice(collision, 1);
         }
+    }
+
+    checkCollisionWithBonus() {
+        let collision = GameManagement.collision(this, bonusList);
+        if (collision > collisionNotDetected) {
+            this.bonus = bonusList[collision].getBonusType();
+            bonusList.splice(collision, 1);
+        }
+    }
+
+    getBonus() {
+        return this.bonus;
+    }
+
+    setBonus(newBonus){
+        this.bonus = newBonus;
     }
 }
 
@@ -261,9 +290,9 @@ class BaseSpaceship extends OpponnentSpaceship {
 
     move() {
         if (this.direction == "right" && this.position.x) {
-            this.position = { x: this.position.x + spaceshipOpponnentVelocity, y: this.position.y + 0.5};
+            this.position = { x: this.position.x + spaceshipOpponnentVelocity, y: this.position.y + 0.5 };
         } else {
-            this.position = { x: this.position.x - spaceshipOpponnentVelocity, y: this.position.y + 0.5};
+            this.position = { x: this.position.x - spaceshipOpponnentVelocity, y: this.position.y + 0.5 };
         }
     }
 
@@ -400,6 +429,58 @@ class Explosion {
 
 /** -----------------------------------
  * 
+ *  Classe Bonus
+ *  
+ ----------------------------------- */
+
+class Bonus {
+    constructor(position, type, height, width, picture) {
+        this.position = position;
+        this.type = type;
+        this.height = height;
+        this.width = width;
+        this.picture = picture;
+    }
+
+    displayBonus() {
+        let bonusPicture = new Image();
+        bonusPicture.src = this.picture;
+        ctx.drawImage(bonusPicture, this.position.x, this.position.y, this.height, this.width);
+    }
+
+    move() {
+        this.position = { x: this.position.x, y: this.position.y + 1 };
+    }
+
+    bonusIsOffScreen() {
+        if (this.position.y > windowHeigth) {
+            return true;
+        }
+    }
+
+    getPosition() {
+        return this.position;
+    }
+
+    getHeight() {
+        return this.height;
+    }
+
+    getWidth() {
+        return this.width;
+    }
+
+    setPosition(newPosition) {
+        this.position = newPosition;
+    }
+
+    getBonusType() {
+        return this.type;
+    }
+}
+
+/** -----------------------------------
+ * 
  *  Classe background
  *  
  ----------------------------------- */
@@ -444,6 +525,7 @@ class HUD {
         // Mettre sous forme de constante les positions
         ctx.fillText("Life : " + player.getHealthPoint(), hudX, hudLifeY);
         ctx.fillText("Score : " + score, hudX, hudScoreY);
+        ctx.fillText("Bonus : " + player.getBonus(), hudX, hudBonusY);
     }
 }
 
@@ -455,7 +537,7 @@ class HUD {
 
 class GameManagement {
     static game_initialization() {
-        player = new PlayerSpaceship({ x: windowMidWidth - spaceshipPlayerHeight / 2, y: windowHeigth - spaceshipPlayerWidth }, spaceshipPlayerHeight, spaceshipPlayerWidth, spaceshipPlayerHealthPoint, "./picture/player.png");
+        player = new PlayerSpaceship({ x: windowMidWidth - spaceshipPlayerHeight / 2, y: windowHeigth - spaceshipPlayerWidth }, spaceshipPlayerHeight, spaceshipPlayerWidth, spaceshipPlayerHealthPoint, 0, 0, "./picture/player.png");
         back = new Background(1, { x: 0, y: 0 });
         back2 = new Background(2, { x: 0, y: - windowHeigth });
         hud = new HUD('#00F');
@@ -471,9 +553,11 @@ class GameManagement {
             let newOP = new BaseSpaceship({ x: GameManagement.getRandomNumber(0, 800), y: 0 }, spaceshipPlayerHeight, spaceshipPlayerWidth, spaceshipOpponnentHealthPoint, "./picture/opponnent.png", "left");
             let asteroid = new Asteroids({ x: GameManagement.getRandomNumber(0, 800), y: 0 }, spaceshipPlayerHeight, spaceshipPlayerWidth, spaceshipOpponnentHealthPoint, "./picture/asteroid.png")
             let newBoss = new BossSpaceship({ x: GameManagement.getRandomNumber(0, 800), y: 0 }, spaceshipPlayerHeight, spaceshipPlayerWidth, spaceshipOpponnentHealthPoint, "./picture/boss.png", "left");
+            let bonus = new Bonus({ x: GameManagement.getRandomNumber(0, 800), y: 0 }, bonusTypeShield, 100, 100, "./picture/bonus.png");
             opponnentList.push(newOP);
             opponnentList.push(asteroid);
             opponnentList.push(newBoss);
+            bonusList.push(bonus);
             newOpponnentAllowed = false;
             setTimeout(
                 newOpponnentAllowed = true,
@@ -527,7 +611,7 @@ class GameManagement {
  *  
  ----------------------------------- */
 
-let player = new PlayerSpaceship({ x: windowMidWidth - spaceshipPlayerHeight / 2, y: windowHeigth - spaceshipPlayerWidth }, spaceshipPlayerHeight, spaceshipPlayerWidth, spaceshipPlayerHealthPoint, "./picture/player.png");
+let player = new PlayerSpaceship({ x: windowMidWidth - spaceshipPlayerHeight / 2, y: windowHeigth - spaceshipPlayerWidth }, spaceshipPlayerHeight, spaceshipPlayerWidth, spaceshipPlayerHealthPoint, 0, 0, "./picture/player.png");
 let back = new Background(1, { x: 0, y: 0 });
 let back2 = new Background(2, { x: 0, y: - windowHeigth });
 let hud = new HUD('#00F');
@@ -550,8 +634,9 @@ function gameLoop() {
     player.displaySpaceship();
     player.move();
     player.shoot();
-    //player.checkCollisionSpaceship();
-    //player.collisionWithBullet(bulletListOpponnent);
+    player.checkCollisionSpaceship();
+    player.collisionWithBullet(bulletListOpponnent);
+    player.checkCollisionWithBonus();
     if (player.getHealthPoint() < 1) {
         GameManagement.game_initialization();
     }
@@ -589,6 +674,15 @@ function gameLoop() {
         explosionList[i].nextAnimationStep(1);
         if (explosionList[i].checkAnimationDuration()) {
             explosionList.splice(i, 1);
+        }
+    }
+
+    // Afficher les bonus
+    for (let i = 0; i < bonusList.length; i++) {
+        bonusList[i].displayBonus();
+        bonusList[i].move();
+        if (bonusList[i].bonusIsOffScreen()) {
+            bonusList.splice(i, 1);
         }
     }
 
