@@ -55,6 +55,8 @@ let bonusList = [];
 ----------------------------------- */
 
 // Déclarer les variables pour la gestion des touches
+let upPressed = false;
+let downPressed = false;
 let rightPressed = false;
 let leftPressed = false;
 let spacePressed = false;
@@ -64,22 +66,50 @@ document.addEventListener("keydown", keyDownHandler, false);
 document.addEventListener("keyup", keyUpHandler, false);
 
 function keyDownHandler(e) {
-    if (e.key == "Right" || e.key == "ArrowRight") {
-        rightPressed = true;
-    } else if (e.key == "Left" || e.key == "ArrowLeft") {
-        leftPressed = true;
-    } else if (e.key == " ") {
-        spacePressed = true;
+    switch(e.key){
+        case "Up":
+        case "ArrowUp":
+            upPressed = true;
+            break;
+        case "Down":
+        case "ArrowDown":
+            downPressed = true;
+            break;
+        case "Right":
+        case "ArrowRight":
+            rightPressed = true;
+            break;
+        case "Left":
+        case "ArrowLeft":
+            leftPressed = true;
+            break;
+        case " ":
+            spacePressed = true;
+            break;
     }
 }
 
 function keyUpHandler(e) {
-    if (e.key == "Right" || e.key == "ArrowRight") {
-        rightPressed = false;
-    } else if (e.key == "Left" || e.key == "ArrowLeft") {
-        leftPressed = false;
-    } else if (e.key == " ") {
-        spacePressed = false;
+    switch(e.key){
+        case "Up":
+        case "ArrowUp":
+            upPressed = false;
+            break;
+        case "Down":
+        case "ArrowDown":
+            downPressed = false;
+            break;
+        case "Right":
+        case "ArrowRight":
+            rightPressed = false;
+            break;
+        case "Left":
+        case "ArrowLeft":
+            leftPressed = false;
+            break;
+        case " ":
+            spacePressed = false;
+            break;
     }
 }
 
@@ -184,7 +214,11 @@ class PlayerSpaceship extends Spaceship {
     }
 
     move() {
-        if (rightPressed && this.position.x < windowWidth - spaceshipPlayerWidth) {
+        if (upPressed && this.position.y > 0) {
+            this.position = { x: this.position.x, y: this.position.y - spaceshipPlayerVelocity };
+        } else if (downPressed && this.position.y < windowHeigth - this.spaceshipHeight) {
+            this.position = { x: this.position.x, y: this.position.y + spaceshipPlayerVelocity};
+        } else if (rightPressed && this.position.x < windowWidth - spaceshipPlayerWidth) {
             this.position = { x: this.position.x + spaceshipPlayerVelocity, y: this.position.y };
         } else if (leftPressed && this.position.x > 0) {
             this.position = { x: this.position.x - spaceshipPlayerVelocity, y: this.position.y };
