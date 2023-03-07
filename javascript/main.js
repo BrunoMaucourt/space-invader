@@ -28,7 +28,12 @@ const bulletDamagePlayer = -1;
 const bulletDamageBoss = -1;
 const scoreOpponnent = 10;
 const collisionNotDetected = -1;
+const bonusTypeNull = 0;
 const bonusTypeShield = 1;
+const bonusTypeShootFast1 = 2;
+const bonusTypeShootFast2 = 3;
+const bonusTypeTwoTime = 4;
+const bonusTypeMoreLife = 5;
 const timeBeforeUpdate = 10;
 const timeBetweenTwoShoot = 400;
 const explosionAnimationDuration = 40;
@@ -66,7 +71,7 @@ document.addEventListener("keydown", keyDownHandler, false);
 document.addEventListener("keyup", keyUpHandler, false);
 
 function keyDownHandler(e) {
-    switch(e.key){
+    switch (e.key) {
         case "Up":
         case "ArrowUp":
             upPressed = true;
@@ -90,7 +95,7 @@ function keyDownHandler(e) {
 }
 
 function keyUpHandler(e) {
-    switch(e.key){
+    switch (e.key) {
         case "Up":
         case "ArrowUp":
             upPressed = false;
@@ -154,9 +159,9 @@ class Spaceship {
         let collision = GameManagement.collision(this, array);
         if (collision > collisionNotDetected) {
             if (array == bulletListOpponnent) {
-                if(player.getBonus() == bonusTypeShield){
+                if (player.getBonus() == bonusTypeShield) {
                     player.setBonus(0);
-                }else{
+                } else {
                     player.setHealthPoint(bulletDamageBoss);
                 }
                 bulletListOpponnent.splice(collision, 1);
@@ -217,7 +222,7 @@ class PlayerSpaceship extends Spaceship {
         if (upPressed && this.position.y > 0) {
             this.position = { x: this.position.x, y: this.position.y - spaceshipPlayerVelocity };
         } else if (downPressed && this.position.y < windowHeigth - this.spaceshipHeight) {
-            this.position = { x: this.position.x, y: this.position.y + spaceshipPlayerVelocity};
+            this.position = { x: this.position.x, y: this.position.y + spaceshipPlayerVelocity };
         } else if (rightPressed && this.position.x < windowWidth - spaceshipPlayerWidth) {
             this.position = { x: this.position.x + spaceshipPlayerVelocity, y: this.position.y };
         } else if (leftPressed && this.position.x > 0) {
@@ -227,12 +232,30 @@ class PlayerSpaceship extends Spaceship {
 
     shoot() {
         if (spacePressed && this.allowedToShoot) {
-            let bullet = new Bullet({ x: this.position.x + spaceshipPlayerWidth / 2 - bulletWidth / 2, y: this.position.y }, "player");
-            bulletListPlayer.push(bullet);
+            // Shoot frequency
+            let shootFrequency = timeBetweenTwoShoot;
+            if (this.bonus == bonusTypeShootFast1) {
+                shootFrequency = 100;
+            } else if (this.bonus == bonusTypeShootFast2) {
+                shootFrequency = 50;
+            }
+
+            // Number of shoot
+            if (this.bonus == bonusTypeTwoTime) {
+                let bullet = new Bullet({ x: this.position.x - bulletWidth / 2, y: this.position.y }, "player");
+                bulletListPlayer.push(bullet);
+                bullet = new Bullet({ x: this.position.x + spaceshipPlayerWidth - bulletWidth / 2, y: this.position.y }, "player");
+                bulletListPlayer.push(bullet);
+            } else {
+                let bullet = new Bullet({ x: this.position.x + spaceshipPlayerWidth / 2 - bulletWidth / 2, y: this.position.y }, "player");
+                bulletListPlayer.push(bullet);
+            }
+
+            // Time between two shoots
             this.allowedToShoot = false;
             setTimeout(() => {
                 this.allowedToShoot = true;
-            }, timeBetweenTwoShoot)
+            }, shootFrequency)
         }
     }
 
@@ -252,7 +275,11 @@ class PlayerSpaceship extends Spaceship {
     checkCollisionWithBonus() {
         let collision = GameManagement.collision(this, bonusList);
         if (collision > collisionNotDetected) {
-            this.bonus = bonusList[collision].getBonusType();
+            if (this.bonus == bonusTypeMoreLife) {
+                this.healthPoint += 1;
+            } else {
+                this.bonus = bonusList[collision].getBonusType();
+            }
             bonusList.splice(collision, 1);
         }
     }
@@ -261,7 +288,7 @@ class PlayerSpaceship extends Spaceship {
         return this.bonus;
     }
 
-    setBonus(newBonus){
+    setBonus(newBonus) {
         this.bonus = newBonus;
     }
 }
@@ -580,6 +607,7 @@ class GameManagement {
         bulletListOpponnent = [];
         opponnentList = [];
         explosionList = [];
+        bonusList = [];
     }
 
     static addOpponnent() {
@@ -587,7 +615,7 @@ class GameManagement {
             let newOP = new BaseSpaceship({ x: GameManagement.getRandomNumber(0, 800), y: 0 }, spaceshipPlayerHeight, spaceshipPlayerWidth, spaceshipOpponnentHealthPoint, "./picture/opponnent.png", "left");
             let asteroid = new Asteroids({ x: GameManagement.getRandomNumber(0, 800), y: 0 }, spaceshipPlayerHeight, spaceshipPlayerWidth, spaceshipOpponnentHealthPoint, "./picture/asteroid.png")
             let newBoss = new BossSpaceship({ x: GameManagement.getRandomNumber(0, 800), y: 0 }, spaceshipPlayerHeight, spaceshipPlayerWidth, spaceshipOpponnentHealthPoint, "./picture/boss.png", "left");
-            let bonus = new Bonus({ x: GameManagement.getRandomNumber(0, 800), y: 0 }, bonusTypeShield, 100, 100, "./picture/bonus.png");
+            let bonus = new Bonus({ x: GameManagement.getRandomNumber(0, 800), y: 0 }, bonusTypeMoreLife, 100, 100, "./picture/bonus.png");
             opponnentList.push(newOP);
             opponnentList.push(asteroid);
             opponnentList.push(newBoss);
