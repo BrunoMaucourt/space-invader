@@ -35,12 +35,20 @@ const bonusTypeShootFast2 = 3;
 const bonusTypeTwoTime = 4;
 const bonusTypeMoreLife = 5;
 const timeBeforeUpdate = 10;
+const timeBeforeMenuSwitch = 100;
 const timeBetweenTwoShoot = 400;
 const explosionAnimationDuration = 40;
 const hudX = 20;
 const hudLifeY = 20;
 const hudScoreY = 80;
 const hudBonusY = 140;
+const gameLoopMenu = 0;
+const gameLoopLevel1 = 1;
+const gameLoopLevel2 = 2;
+const gameLoopLevel3 = 3;
+const colorBlack = '#000000';
+const colorGrey = '#999999';
+const colorWhiet = '#ffffff';
 
 // Charger le canvas
 const canvas = document.getElementById("myCanvas");
@@ -52,6 +60,7 @@ let bulletListOpponnent = [];
 let explosionList = [];
 let opponnentList = [];
 let bonusList = [];
+let menuList = [];
 
 /** -----------------------------------
 * 
@@ -401,7 +410,7 @@ class BossSpaceship extends OpponnentSpaceship {
             this.allowedToShoot = false;
             setTimeout(() => {
                 this.allowedToShoot = true;
-            }, timeBetweenTwoShoot * 5)
+            }, timeBetweenTwoShoot)
         }
     }
 }
@@ -583,10 +592,60 @@ class HUD {
         ctx.fillStyle = this.fontColor;
         ctx.font = '30px Sans-Serif';
         ctx.textBaseline = 'top';
-        // Mettre sous forme de constante les positions
         ctx.fillText("Life : " + player.getHealthPoint(), hudX, hudLifeY);
         ctx.fillText("Score : " + score, hudX, hudScoreY);
         ctx.fillText("Bonus : " + player.getBonus(), hudX, hudBonusY);
+    }
+}
+
+/** -----------------------------------
+ * 
+ *  Classe Menu
+ *  
+ ----------------------------------- */
+
+class Menu {
+    constructor(text, color, size, positionX, positionY, path, currentMenu) {
+        this.text = text;
+        this.color = color;
+        this.size = size;
+        this.positionX = positionX;
+        this.positionY = positionY;
+        this.path = path;
+        this.currentMenu = currentMenu;
+    }
+
+    display() {
+        if (this.currentMenu == true) {
+            ctx.fillStyle = colorBlack;
+        } else {
+            ctx.fillStyle = colorGrey;
+        }
+        ctx.font = this.size;
+        ctx.textBaseline = 'top';
+        this.textMidSize = ctx.measureText(this.text).width / 2;
+        ctx.fillText(this.text, this.positionX - this.textMidSize, this.positionY);
+    }
+
+    switchCurrentMenu() {
+        if (allowedToSwitchMenu == true && this.currentMenu == true) {
+            console.log("Peut être modifié");
+            return true;
+        }
+    }
+
+    chooseMenu() {
+        if (spacePressed && this.currentMenu) {
+            currentLoop = this.path;
+        }
+    }
+
+    oldCurrentMenu() {
+        this.currentMenu = false;
+    }
+
+    newCurrentMenu() {
+        this.currentMenu = true;
     }
 }
 
@@ -679,6 +738,16 @@ let back2 = new Background(2, { x: 0, y: - windowHeigth });
 let hud = new HUD('#00F');
 let score = 0;
 let newOpponnentAllowed = true;
+let currentLoop = 0;
+let allowedToSwitchMenu = true;
+// Add menu
+let title = new Menu("Shooter", '#000000', '60px Sans-Serif', windowMidWidth, 100, "", true);
+let buttonPlay = new Menu("Jouer", '#000000', '30px Sans-Serif', windowMidWidth, 200, gameLoopLevel1, true);
+menuList.push(buttonPlay);
+let buttonInfo = new Menu("Infos", '#000000', '30px Sans-Serif', windowMidWidth, 300, gameLoopLevel2, false);
+menuList.push(buttonInfo);
+let buttonCredit = new Menu("Credits", '#000000', '30px Sans-Serif', windowMidWidth, 400, gameLoopLevel3, false);
+menuList.push(buttonCredit);
 
 /**
  * Fonction pour mise à jour de l'écran et gestions des actions
@@ -687,68 +756,110 @@ let newOpponnentAllowed = true;
 function gameLoop() {
     // Effacer l'affichage précédant
     ctx.clearRect(0, 0, windowWidth, windowHeigth);
-    // Background
-    back.display();
-    back2.display();
-    back.move();
-    back2.move();
-    // PlayerSpaceship
-    player.displaySpaceship();
-    player.move();
-    player.shoot();
-    player.checkCollisionSpaceship();
-    player.collisionWithBullet(bulletListOpponnent);
-    player.checkCollisionWithBonus();
-    if (player.getHealthPoint() < 1) {
-        GameManagement.game_initialization();
-    }
+    if (currentLoop == gameLoopMenu) {
 
-    // Afficher les adversaires
-    for (let i = 0; i < opponnentList.length; i++) {
-        opponnentList[i].displaySpaceship();
-        opponnentList[i].move();
-        opponnentList[i].collisionWithBullet(bulletListPlayer);
-        if (opponnentList[i] instanceof BossSpaceship || opponnentList[i] instanceof BaseSpaceship) {
-            opponnentList[i].switchDirection();
-        }
-        if (opponnentList[i] instanceof BossSpaceship) {
-            opponnentList[i].shoot();
-        }
-
-        // Vérifier si les adversaires sont toujours vivants (ou hors de l'écran)
-        if (opponnentList[i].checkIfOffScreen() || opponnentList[i].checkIfDead()) {
-            opponnentList[i].explosion();
-            opponnentList.splice(i, 1);
-        }
-    }
-
-    if (opponnentList.length == 0) {
-        GameManagement.addOpponnent();
-    }
-
-    // Afficher et gérer les munitions des adversaires et du joueur
-    GameManagement.bulletManagement(bulletListOpponnent);
-    GameManagement.bulletManagement(bulletListPlayer);
-
-    // Afficher les explosions
-    for (let i = 0; i < explosionList.length; i++) {
-        explosionList[i].displayExplosion();
-        explosionList[i].nextAnimationStep(1);
-        if (explosionList[i].checkAnimationDuration()) {
-            explosionList.splice(i, 1);
+        title.display();
+        for (let i = 0; i < menuList.length; i++) {
+            menuList[i].display();
+            menuList[i].chooseMenu();
+            if (menuList[i].switchCurrentMenu()) {
+                if(upPressed || rightPressed || downPressed || leftPressed){
+                    //
+                    if(downPressed || rightPressed){
+                        menuList[i].oldCurrentMenu();
+                        if (i == menuList.length - 1) {
+                            menuList[0].newCurrentMenu();
+                        } else {
+                            menuList[i + 1].newCurrentMenu();
+                        }
+                    }else if(upPressed || leftPressed){
+                        menuList[i].oldCurrentMenu();
+                        if (i == 0) {
+                            menuList[menuList.length - 1].newCurrentMenu();
+                        } else {
+                            menuList[i - 1].newCurrentMenu();
+                        }
+                    }
+                    // Timing gestion
+                    allowedToSwitchMenu = false;
+                    setTimeout(() => {
+                        allowedToSwitchMenu = true;
+                    }, 300);
+                    console.log(allowedToSwitchMenu);   
+                }
+            }
         }
     }
-
-    // Afficher les bonus
-    for (let i = 0; i < bonusList.length; i++) {
-        bonusList[i].displayBonus();
-        bonusList[i].move();
-        if (bonusList[i].bonusIsOffScreen()) {
-            bonusList.splice(i, 1);
+    if (currentLoop == gameLoopLevel1) {
+        // Background
+        back.display();
+        back2.display();
+        back.move();
+        back2.move();
+        // PlayerSpaceship
+        player.displaySpaceship();
+        player.move();
+        player.shoot();
+        player.checkCollisionSpaceship();
+        player.collisionWithBullet(bulletListOpponnent);
+        player.checkCollisionWithBonus();
+        if (player.getHealthPoint() < 1) {
+            GameManagement.game_initialization();
         }
-    }
 
-    hud.display();
+        // Afficher les adversaires
+        for (let i = 0; i < opponnentList.length; i++) {
+            opponnentList[i].displaySpaceship();
+            opponnentList[i].move();
+            opponnentList[i].collisionWithBullet(bulletListPlayer);
+            if (opponnentList[i] instanceof BossSpaceship || opponnentList[i] instanceof BaseSpaceship) {
+                opponnentList[i].switchDirection();
+            }
+            if (opponnentList[i] instanceof BossSpaceship) {
+                opponnentList[i].shoot();
+            }
+
+            // Vérifier si les adversaires sont toujours vivants (ou hors de l'écran)
+            if (opponnentList[i].checkIfOffScreen() || opponnentList[i].checkIfDead()) {
+                opponnentList[i].explosion();
+                opponnentList.splice(i, 1);
+            }
+        }
+
+        if (opponnentList.length == 0) {
+            GameManagement.addOpponnent();
+        }
+
+        // Afficher et gérer les munitions des adversaires et du joueur
+        GameManagement.bulletManagement(bulletListOpponnent);
+        GameManagement.bulletManagement(bulletListPlayer);
+
+        // Afficher les explosions
+        for (let i = 0; i < explosionList.length; i++) {
+            explosionList[i].displayExplosion();
+            explosionList[i].nextAnimationStep(1);
+            if (explosionList[i].checkAnimationDuration()) {
+                explosionList.splice(i, 1);
+            }
+        }
+
+        // Afficher les bonus
+        for (let i = 0; i < bonusList.length; i++) {
+            bonusList[i].displayBonus();
+            bonusList[i].move();
+            if (bonusList[i].bonusIsOffScreen()) {
+                bonusList.splice(i, 1);
+            }
+        }
+
+        hud.display();
+    }
+    if (currentLoop == gameLoopLevel2){
+
+    }
+    if(currentLoop == gameLoopLevel3){
+
+    }
 }
 
 // Mettre à jour l'affichage
